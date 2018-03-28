@@ -1,23 +1,20 @@
 #!/bin/bash
-#set -x
 SCRIPT_PWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# check if ntp was installed
 if [ ! -x "$(command -v ntpd)" ]; then
 	apt-get install -y ntp
-else
-	echo "ntpd is exists"
 fi
 
-n="false"
+## rewrite ntpd.conf and restart service
 
-cp /etc/ntp.conf /etc/ntp_back$(date '+%d.%m.%Y_%T').conf
+n="false" #marker for ntp record
 
 grep -r '^pool' /etc/ntp.conf | while read line; do
 	if [ ${n} == "false" ]; then
-		echo "line=${line}"
-		#sed -i's/${line}/"pool ua.pool.ntp.org"/' /etc/ntp.conf
+		#echo "line=${line}"
 		sed -i "s/${line}/pool ua.pool.ntp.org/g" /etc/ntp.conf
-		n="true"
+		n="true" # add to one record using marker, other records wil be removed
 		continue
 	fi
 	if [ ${n} == "true" ]; then
@@ -28,8 +25,13 @@ done
 
 systemctl restart ntp.service
 
-#echo ${SCRIPT_PWD}
-TESTCRON=$(crontab -l -uroot | grep ntp_verify.sh)
-if [[ -z ${TESTCRON} ]]; then
-	echo "*/5 * * * * ${SCRIPT_PWD}/ntp_verify.sh" >> /var/spool/cron/crontabs/root
+## end rewrite ntpd.conf and restart service
+
+# make backup default configuration file
+/bin/cp /etc/ntp.conf /etc/ntp.conf.back
+
+#TESTCRON=$(crontab -l -uroot | grep ntp_verify.sh)
+TESTCRON=$(cat /var/spool/cron/crontabs/root | grep ntp_verify.sh)
+if [[ -z ${TESTCRON} ]] || [[ ${TESTCRON} = "no crontab for root" ]] ; then
+	echo "*/1 * * * * ${SCRIPT_PWD}/ntp_verify.sh" >> /var/spool/cron/crontabs/root
 fi
