@@ -30,8 +30,8 @@ systemctl restart ntp.service
 # make backup default configuration file
 /bin/cp /etc/ntp.conf /etc/ntp.conf.back
 
-#TESTCRON=$(crontab -l -uroot | grep ntp_verify.sh)
-TESTCRON=$(cat /var/spool/cron/crontabs/root | grep ntp_verify.sh)
+TESTCRON=$(crontab -l -uroot | grep ntp_verify.sh)
 if [[ -z ${TESTCRON} ]] || [[ ${TESTCRON} = "no crontab for root" ]] ; then
-	echo "*/1 * * * * ${SCRIPT_PWD}/ntp_verify.sh" >> /var/spool/cron/crontabs/root
+	NEWCRON="*/1 * * * * ${SCRIPT_PWD}/ntp_verify.sh"
+	(crontab -uroot -l; echo "${NEWCRON}") | crontab -u root -
 fi
